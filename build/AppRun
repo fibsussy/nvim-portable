@@ -30,8 +30,8 @@ if [ ! -d "$BUNDLED_DATA/lazy" ]; then
     exit 1
 fi
 
-# Persistent writable dir - survives reboots, uses user home
-NVIM_HOME="$HOME/.nvim-portable"
+# Persistent writable dir
+NVIM_HOME="$HOME/.config/nvim-portable"
 mkdir -p "$NVIM_HOME"
 
 # XDG dirs - nvim appends /nvim/ to these
@@ -41,16 +41,20 @@ export XDG_CACHE_HOME="$NVIM_HOME/cache"
 export XDG_STATE_HOME="$NVIM_HOME/state"
 export LD_LIBRARY_PATH="$APPDIR/usr/lib:$LD_LIBRARY_PATH"
 
-# Setup writable config dir (nvim looks at $XDG_CONFIG_HOME/nvim/)
-mkdir -p "$XDG_CONFIG_HOME"
-if [ ! -d "$XDG_CONFIG_HOME/nvim" ]; then
-    cp -a "$BUNDLED_CONFIG" "$XDG_CONFIG_HOME/nvim"
-fi
+mkdir -p "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
 
-# Setup writable data dir (nvim looks at $XDG_DATA_HOME/nvim/)
-mkdir -p "$XDG_DATA_HOME"
-if [ ! -d "$XDG_DATA_HOME/nvim" ]; then
+# Version check - only clone if appimage version changed
+BUNDLED_VERSION="$APPDIR/nvim-home/version"
+LOCAL_VERSION="$NVIM_HOME/version"
+if [ -f "$BUNDLED_VERSION" ] && [ -f "$LOCAL_VERSION" ] && [ "$(cat "$BUNDLED_VERSION")" = "$(cat "$LOCAL_VERSION")" ]; then
+    : # version matches, skip cloning
+else
+    echo "nvim-portable: setting up config and data..." >&2
+    mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME"
+    rm -rf "$XDG_CONFIG_HOME/nvim" "$XDG_DATA_HOME/nvim"
+    cp -a "$BUNDLED_CONFIG" "$XDG_CONFIG_HOME/nvim"
     cp -a "$BUNDLED_DATA" "$XDG_DATA_HOME/nvim"
+    [ -f "$BUNDLED_VERSION" ] && cp "$BUNDLED_VERSION" "$LOCAL_VERSION"
 fi
 
 # --- FONT SETUP ---
@@ -65,24 +69,11 @@ fi
 if [ -d "$APPDIR/usr/share/fonts" ] && [ ! -d "$HOME/.local/share/fonts/nvim-portable" ]; then
     mkdir -p "$HOME/.local/share/fonts"
     cp -a "$APPDIR/usr/share/fonts" "$HOME/.local/share/fonts/nvim-portable"
-    # Rebuild font cache so fonts are immediately available
     if command -v fc-cache >/dev/null 2>&1; then
         fc-cache -f "$HOME/.local/share/fonts" 2>/dev/null || true
     fi
     echo "Fonts installed to ~/.local/share/fonts/nvim-portable/" >&2
     echo "Restart your terminal (st) to use CaskaydiaCove Nerd Font Mono" >&2
-fi
-
-mkdir -p "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
-
-# Sanity check: verify writable dirs
-if [ ! -w "$XDG_CONFIG_HOME/nvim" ]; then
-    echo "FATAL: config dir not writable: $XDG_CONFIG_HOME/nvim" >&2
-    exit 1
-fi
-if [ ! -w "$XDG_DATA_HOME/nvim" ]; then
-    echo "FATAL: data dir not writable: $XDG_DATA_HOME/nvim" >&2
-    exit 1
 fi
 
 exec "$APPDIR/usr/bin/nvim" "$@"

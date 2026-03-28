@@ -63,8 +63,16 @@ cp /tmp/nvim-linux-x86_64/share/icons/hicolor/128x128/apps/nvim.png "$APPIMAGE_D
 cp "$BUILD_DIR/AppRun" "$APPIMAGE_DIR/"
 chmod +x "$APPIMAGE_DIR/AppRun"
 
-# 7. Build AppImage
-echo "[6/6] Building AppImage..."
+# 7. Generate version hash
+echo "[6/7] Generating version hash..."
+find "$APPIMAGE_DIR/usr/share/nvim" "$APPIMAGE_DIR/usr/bin/nvim" \
+     "$APPIMAGE_DIR/nvim-home/config" "$APPIMAGE_DIR/nvim-home/data" \
+     "$APPIMAGE_DIR/usr/share/fonts" \
+     -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1 \
+     > "$APPIMAGE_DIR/nvim-home/version"
+
+# 8. Build AppImage
+echo "[7/7] Building AppImage..."
 
 "$BUILD_DIR/linuxdeploy-x86_64.AppImage" \
     --appdir "$APPIMAGE_DIR" \
