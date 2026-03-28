@@ -1,0 +1,88 @@
+#!/bin/bash
+
+SELF=$(readlink -f "$0")
+APPDIR=$(dirname "$SELF")
+
+# Sanity check: verify binary exists
+if [ ! -x "$APPDIR/usr/bin/nvim" ]; then
+    echo "FATAL: nvim binary not found at $APPDIR/usr/bin/nvim" >&2
+    exit 1
+fi
+
+# Sanity check: verify runtime exists
+export VIMRUNTIME="$APPDIR/usr/share/nvim"
+if [ ! -d "$VIMRUNTIME/syntax" ]; then
+    echo "FATAL: runtime not found at $VIMRUNTIME" >&2
+    exit 1
+fi
+
+# Sanity check: verify bundled config exists
+BUNDLED_CONFIG="$APPDIR/nvim-home/config"
+if [ ! -f "$BUNDLED_CONFIG/init.lua" ]; then
+    echo "FATAL: bundled config not found at $BUNDLED_CONFIG/init.lua" >&2
+    exit 1
+fi
+
+# Sanity check: verify bundled data exists
+BUNDLED_DATA="$APPDIR/nvim-home/data"
+if [ ! -d "$BUNDLED_DATA/lazy" ]; then
+    echo "FATAL: bundled data not found at $BUNDLED_DATA/lazy" >&2
+    exit 1
+fi
+
+# Persistent writable dir - survives reboots, uses user home
+NVIM_HOME="$HOME/.nvim-portable"
+mkdir -p "$NVIM_HOME"
+
+# XDG dirs - nvim appends /nvim/ to these
+export XDG_CONFIG_HOME="$NVIM_HOME/config"
+export XDG_DATA_HOME="$NVIM_HOME/data"
+export XDG_CACHE_HOME="$NVIM_HOME/cache"
+export XDG_STATE_HOME="$NVIM_HOME/state"
+export LD_LIBRARY_PATH="$APPDIR/usr/lib:$LD_LIBRARY_PATH"
+
+# Setup writable config dir (nvim looks at $XDG_CONFIG_HOME/nvim/)
+mkdir -p "$XDG_CONFIG_HOME"
+if [ ! -d "$XDG_CONFIG_HOME/nvim" ]; then
+    cp -a "$BUNDLED_CONFIG" "$XDG_CONFIG_HOME/nvim"
+fi
+
+# Setup writable data dir (nvim looks at $XDG_DATA_HOME/nvim/)
+mkdir -p "$XDG_DATA_HOME"
+if [ ! -d "$XDG_DATA_HOME/nvim" ]; then
+    cp -a "$BUNDLED_DATA" "$XDG_DATA_HOME/nvim"
+fi
+
+# --- FONT SETUP ---
+
+# Install fontconfig to system location
+if [ ! -f "$HOME/.config/fontconfig/fonts.conf" ] && [ -f "$BUNDLED_CONFIG/fonts.conf" ]; then
+    mkdir -p "$HOME/.config/fontconfig"
+    cp "$BUNDLED_CONFIG/fonts.conf" "$HOME/.config/fontconfig/"
+fi
+
+# Install fonts to system location (where fontconfig looks)
+if [ -d "$APPDIR/usr/share/fonts" ] && [ ! -d "$HOME/.local/share/fonts/nvim-portable" ]; then
+    mkdir -p "$HOME/.local/share/fonts"
+    cp -a "$APPDIR/usr/share/fonts" "$HOME/.local/share/fonts/nvim-portable"
+    # Rebuild font cache so fonts are immediately available
+    if command -v fc-cache >/dev/null 2>&1; then
+        fc-cache -f "$HOME/.local/share/fonts" 2>/dev/null || true
+    fi
+    echo "Fonts installed to ~/.local/share/fonts/nvim-portable/" >&2
+    echo "Restart your terminal (st) to use CaskaydiaCove Nerd Font Mono" >&2
+fi
+
+mkdir -p "$XDG_CACHE_HOME" "$XDG_STATE_HOME"
+
+# Sanity check: verify writable dirs
+if [ ! -w "$XDG_CONFIG_HOME/nvim" ]; then
+    echo "FATAL: config dir not writable: $XDG_CONFIG_HOME/nvim" >&2
+    exit 1
+fi
+if [ ! -w "$XDG_DATA_HOME/nvim" ]; then
+    echo "FATAL: data dir not writable: $XDG_DATA_HOME/nvim" >&2
+    exit 1
+fi
+
+exec "$APPDIR/usr/bin/nvim" "$@"

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Neovim
+GenericName=Text Editor
+Comment=Portable Neovim with bundled config
+Exec=nvim %F
+Terminal=true
+Type=Application
+Categories=Development;Utility;
+Icon=nvim

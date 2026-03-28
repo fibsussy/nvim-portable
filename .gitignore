@@ -1,0 +1,21 @@
+# Build outputs
+nvim-portable.appimage
+st.portable
+
+# Build artifacts
+nvim.AppDir/
+squashfs-root/
+Neovim-*.AppImage
+*.tar.gz
+
+# Downloaded tools
+linuxdeploy-x86_64.AppImage
+
+# Temp files
+/tmp/
+*.log
+
+# Editor
+*.swp
+*.swo
+*~
