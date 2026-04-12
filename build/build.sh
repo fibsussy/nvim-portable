@@ -48,12 +48,9 @@ cp /usr/share/fonts/twemoji/twemoji.ttf "$APPIMAGE_DIR/usr/share/fonts/twemoji/"
 # Copy fontconfig
 cp ~/.config/fontconfig/fonts.conf "$APPIMAGE_DIR/nvim-home/config/"
 
-# 5. Set rpath and bundle shared libs
-echo "[5/6] Bundling shared libraries..."
+# 5. Set rpath
+echo "[5/6] Setting rpath..."
 patchelf --set-rpath '$ORIGIN/../lib' --force-rpath "$APPIMAGE_DIR/usr/bin/nvim"
-for lib in $(ldd /tmp/nvim-linux-x86_64/bin/nvim | grep -oP '/\S+'); do
-    cp -n "$lib" "$APPIMAGE_DIR/usr/lib/" 2>/dev/null || true
-done
 
 # 6. Create desktop file and icon
 cp "$BUILD_DIR/nvim.desktop" "$APPIMAGE_DIR/"
@@ -79,6 +76,14 @@ echo "[7/7] Building AppImage..."
     --executable "$APPIMAGE_DIR/usr/bin/nvim" \
     --desktop-file "$APPIMAGE_DIR/nvim.desktop" \
     --icon-file "$APPIMAGE_DIR/nvim.png" \
+    --exclude-library="libc.so*" \
+    --exclude-library="libm.so*" \
+    --exclude-library="libpthread.so*" \
+    --exclude-library="libdl.so*" \
+    --exclude-library="librt.so*" \
+    --exclude-library="libutil.so*" \
+    --exclude-library="libresolv.so*" \
+    --exclude-library="ld-linux*" \
     --output appimage
 
 # Move output
